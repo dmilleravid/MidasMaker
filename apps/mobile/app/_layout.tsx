@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native";
-import "nativewind/tailwind.css";
+import "../global.css";
 
 export default function RootLayout() {
   return (
