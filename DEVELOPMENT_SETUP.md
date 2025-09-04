@@ -24,4 +24,11 @@
 - API: `cd apps/api && npm test`
 - Web/Mobile: add tests with Jest/React Testing Library as needed
 
+## Seed Data
+- Ensure your local DB is configured in `apps/api/.env`.
+- Run: `cd apps/api && npm run seed`
+- Sample accounts:
+  - Admin: `admin@example.com` / `password123`
+  - User: `user@example.com` / `password123`
+
 

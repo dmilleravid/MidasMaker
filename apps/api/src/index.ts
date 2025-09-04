@@ -68,10 +68,23 @@ app.get("/api/product/:id", authenticateJWT, requireRole(["admin", "user"]), asy
   res.json(product);
 });
 
+app.get("/api/products", authenticateJWT, requireRole(["admin", "user"]), async (_req, res) => {
+  const products = await prisma.product.findMany({ orderBy: { createdAt: "desc" } });
+  res.json(products);
+});
+
 app.get("/api/order/:id", authenticateJWT, requireRole(["admin", "user"]), async (req, res) => {
   const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { user: true, product: true } });
   if (!order) return res.status(404).json({ error: "Not found" });
   res.json(order);
+});
+
+app.get("/api/orders", authenticateJWT, requireRole(["admin", "user"]), async (_req, res) => {
+  const orders = await prisma.order.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { user: true, product: true },
+  });
+  res.json(orders);
 });
 
 export { app };
