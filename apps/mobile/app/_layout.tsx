@@ -1,13 +1,19 @@
 import { Stack } from "expo-router";
-import { SafeAreaView } from "react-native";
-import "../global.css";
+import { SafeAreaView, StyleSheet } from "react-native";
 
 export default function RootLayout() {
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={styles.container}>
       <Stack screenOptions={{ headerShown: true }} />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+});
 
 
