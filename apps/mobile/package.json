@@ -5,6 +5,11 @@
   "scripts": {
     "start": "expo start",
     "test": "jest",
+    "build": "npx tsc --noEmit",
+    "build:android": "npx eas build --platform android --profile production --non-interactive",
+    "build:ios": "npx eas build --platform ios --profile production --non-interactive",
+    "build:preview:android": "npx eas build --platform android --profile preview --non-interactive",
+    "build:preview:ios": "npx eas build --platform ios --profile preview --non-interactive",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"

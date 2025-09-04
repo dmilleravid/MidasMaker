@@ -8,6 +8,8 @@
     "dev:mobile": "npm --prefix apps/mobile run start",
     "build:web": "npm --prefix apps/web run build",
     "build:api": "npm --prefix apps/api run build",
+    "build:mobile": "npm --prefix apps/mobile run build",
+    "build": "npm run build:api && npm run build:web && npm run build:mobile",
     "test": "npm -ws run test",
     "lint": "npm -ws run lint"
   }
