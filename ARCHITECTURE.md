@@ -2,19 +2,26 @@
 
 This repository is a monorepo that contains three applications: a Next.js web app, an Expo React Native mobile app, and an Express API backed by PostgreSQL via Prisma. Authentication is handled via Google OAuth 2.0 with refresh tokens for indefinite access, email/password authentication, and application JWTs.
 
-```mermaid
-flowchart LR
-  subgraph Client
-    Web[Next.js Web]
-    Mobile[Expo React Native]
-  end
-  Web -->|HTTPS| API
-  Mobile -->|HTTPS| API
-  subgraph Server
-    API[Express API]
-    DB[(PostgreSQL)]
-  end
-  API -->|Prisma| DB
+```
+[User] <--> [Next.js Web App] <--> [Express.js API Server] <--> [PostgreSQL Database]
+                                    |                    |
+                                    |                    +--> [JWT Authentication]
+                                    |                    |
+                                    |                    +--> [Google OAuth 2.0]
+                                    |                    |
+                                    |                    +--> [Gmail API Integration]
+                                    |                    |
+                                    |                    +--> [Google Drive API Integration]
+                                    |                    |
+                                    |                    +--> [User Management]
+                                    |                    |
+                                    |                    +--> [Product Management]
+                                    |                    |
+                                    |                    +--> [Order Management]
+                                    |
+                                    +--> [Expo React Native Mobile] <--> [Express.js API Server]
+                                    |
+                                    +--> [Prisma ORM] <--> [PostgreSQL Database]
 ```
 
 ## 1. Repository Structure

@@ -15,6 +15,24 @@ export default function Dashboard() {
   }>>([]);
   const [gmailLoading, setGmailLoading] = useState(false);
   const [gmailError, setGmailError] = useState<string | null>(null);
+  
+  const [driveFolders, setDriveFolders] = useState<Array<{
+    id: string;
+    name: string;
+    createdTime: string;
+    modifiedTime: string;
+    size: string;
+    owner: string;
+    hasParent: boolean;
+    parents: string[];
+  }>>([]);
+  const [driveLoading, setDriveLoading] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [currentDriveParent, setCurrentDriveParent] = useState<{
+    id: string;
+    name: string;
+    parents: string[];
+  }>({ id: 'root', name: 'My Drive', parents: [] });
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -109,11 +127,70 @@ export default function Dashboard() {
     }
   };
 
+  const fetchDriveFolders = async (parentId: string = currentDriveParent.id) => {
+    setDriveLoading(true);
+    setDriveError(null);
+    
+    try {
+      const token = localStorage.getItem('auth_token') || document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+      
+      if (!token) {
+        setDriveError('No authentication token found');
+        return;
+      }
+
+      const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001"}/api/drive/folders`);
+      if (parentId !== 'root') {
+        url.searchParams.set('parentId', parentId);
+      }
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch Drive folders');
+      }
+
+      const data = await response.json();
+      setDriveFolders(data.folders || []);
+      setCurrentDriveParent(data.currentParent || { id: 'root', name: 'My Drive', parents: [] });
+    } catch (error) {
+      console.error('Error fetching Drive folders:', error);
+      setDriveError(error instanceof Error ? error.message : 'Failed to fetch Drive folders');
+    } finally {
+      setDriveLoading(false);
+    }
+  };
+
   const handleTabChange = (tab: 'gmail' | 'drive') => {
     setActiveTab(tab);
     if (tab === 'gmail' && gmailLabels.length === 0 && !gmailLoading) {
       fetchGmailLabels();
+    } else if (tab === 'drive' && driveFolders.length === 0 && !driveLoading) {
+      fetchDriveFolders();
     }
+  };
+
+  const handleFolderClick = (folderId: string) => {
+    fetchDriveFolders(folderId);
+  };
+
+  const handleBackClick = () => {
+    if (currentDriveParent.id === 'root') {
+      return; // Already at root
+    }
+    
+    // Go to parent folder
+    const parentId = currentDriveParent.parents.length > 0 ? currentDriveParent.parents[0] : 'root';
+    fetchDriveFolders(parentId);
   };
 
   const GmailContent = () => (
@@ -205,32 +282,114 @@ export default function Dashboard() {
     <div>
       <div className="dashboard-stats">
         <div className="dashboard-stat">
-          <p className="dashboard-stat-value">0</p>
-          <p className="dashboard-stat-label">Files</p>
+          <p className="dashboard-stat-value">{driveFolders.length}</p>
+          <p className="dashboard-stat-label">Folders</p>
         </div>
         <div className="dashboard-stat">
-          <p className="dashboard-stat-value">0 GB</p>
-          <p className="dashboard-stat-label">Storage Used</p>
+          <p className="dashboard-stat-value">
+            {driveFolders.reduce((total, folder) => total + parseInt(folder.size || '0'), 0).toLocaleString()} bytes
+          </p>
+          <p className="dashboard-stat-label">Total Size</p>
         </div>
         <div className="dashboard-stat">
-          <p className="dashboard-stat-value">0</p>
-          <p className="dashboard-stat-label">Shared Files</p>
+          <p className="dashboard-stat-value">
+            {driveFolders.filter(folder => folder.hasParent).length}
+          </p>
+          <p className="dashboard-stat-label">Nested Folders</p>
         </div>
       </div>
       
       <div className="dashboard-card">
-        <h3>📁 Recent Files</h3>
-        <p>Access your most recently opened Google Drive files and folders.</p>
-      </div>
-      
-      <div className="dashboard-card">
-        <h3>🔍 File Search</h3>
-        <p>Search through your Google Drive files with powerful search capabilities.</p>
-      </div>
-      
-      <div className="dashboard-card">
-        <h3>📈 Storage Overview</h3>
-        <p>Monitor your Google Drive storage usage and manage your files efficiently.</p>
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-4">
+            <h3>📁 Google Drive Folders</h3>
+            {currentDriveParent.id !== 'root' && (
+              <button 
+                onClick={handleBackClick}
+                className="btn btn-secondary text-sm"
+                disabled={driveLoading}
+              >
+                ← Back to {currentDriveParent.parents.length > 0 ? 'Parent' : 'My Drive'}
+              </button>
+            )}
+          </div>
+          <button 
+            onClick={() => fetchDriveFolders(currentDriveParent.id)} 
+            className="btn btn-primary"
+            disabled={driveLoading}
+          >
+            {driveLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+        
+        {/* Breadcrumb */}
+        <div className="mb-4 text-sm text-gray-600">
+          <span className="font-medium">Current location:</span> {currentDriveParent.name}
+        </div>
+        
+        {driveLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading Drive folders...</p>
+          </div>
+        ) : driveError ? (
+          <div className="text-center py-8">
+            <p className="text-red-600 mb-2">Error: {driveError}</p>
+            <button onClick={() => fetchDriveFolders(currentDriveParent.id)} className="btn btn-primary">
+              Try Again
+            </button>
+          </div>
+        ) : driveFolders.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="dashboard-table">
+              <thead>
+                <tr>
+                  <th className="text-left">
+                    Folder Name
+                    <span className="ml-1 text-xs text-gray-500">↑</span>
+                  </th>
+                  <th className="text-left">Owner</th>
+                  <th className="text-right">Size</th>
+                  <th className="text-right">Created</th>
+                  <th className="text-right">Modified</th>
+                </tr>
+              </thead>
+              <tbody>
+                {driveFolders.map((folder) => (
+                  <tr key={folder.id}>
+                    <td className="font-medium">
+                      <button
+                        onClick={() => handleFolderClick(folder.id)}
+                        className="text-left hover:text-blue-600 hover:underline flex items-center gap-2"
+                        disabled={driveLoading}
+                      >
+                        📁 {folder.name}
+                        <span className="text-xs text-gray-400">→</span>
+                      </button>
+                    </td>
+                    <td>{folder.owner}</td>
+                    <td className="text-right">
+                      {parseInt(folder.size || '0').toLocaleString()} bytes
+                    </td>
+                    <td className="text-right">
+                      {new Date(folder.createdTime).toLocaleDateString()}
+                    </td>
+                    <td className="text-right">
+                      {new Date(folder.modifiedTime).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-600">No Google Drive folders found.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Make sure you have folders in your Google Drive account.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
