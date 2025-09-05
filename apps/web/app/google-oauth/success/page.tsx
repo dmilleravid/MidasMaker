@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
+import Link from "next/link";
 
 export default function GoogleSuccessPage() {
   useEffect(() => {
@@ -11,9 +12,16 @@ export default function GoogleSuccessPage() {
   }, []);
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 16 }}>Google login successful</h1>
-      <p>You can now navigate the app with your session token stored locally.</p>
+    <div className="oauth-container">
+      <main className="oauth-main">
+        <h1 className="text-2xl font-semibold tracking-[-.01em]">Google login successful</h1>
+        <p className="text-sm/6">You can now navigate the app with your session token stored locally.</p>
+        <div className="oauth-actions-row">
+          <Link className="oauth-btn" href="/product">Go to Products</Link>
+          <Link className="oauth-btn" href="/order">Go to Orders</Link>
+          <Link className="oauth-btn" href="/">Home</Link>
+        </div>
+      </main>
     </div>
   );
 }

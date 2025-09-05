@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 
 export default function GoogleLoginPage() {
   const handleLogin = () => {
@@ -8,11 +9,12 @@ export default function GoogleLoginPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 16 }}>Sign in with Google</h1>
-      <button onClick={handleLogin} style={{ padding: "8px 16px", border: "1px solid #ddd", borderRadius: 6 }}>
-        Continue with Google
-      </button>
+    <div className="oauth-container">
+      <main className="oauth-main oauth-main-lgap">
+        <h1 className="text-2xl font-semibold tracking-[-.01em]">Sign in with Google</h1>
+        <button onClick={handleLogin} className="oauth-btn">Continue with Google</button>
+        <Link href="/" className="oauth-btn">Back to Home</Link>
+      </main>
     </div>
   );
 }
