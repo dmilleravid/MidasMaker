@@ -27,7 +27,17 @@ flowchart LR
 │   │   │   ├── schema.prisma     # DB schema & relations
 │   │   │   └── seed.ts           # Sample data seed
 │   │   └── src/
-│   │       └── index.ts          # API entrypoint, routes, auth
+│   │       ├── index.ts          # API entrypoint & route mounting
+│   │       ├── middleware/
+│   │       │   └── auth.ts       # JWT authentication middleware
+│   │       └── routes/
+│   │           ├── auth.ts       # Email/password authentication
+│   │           ├── google-oauth.ts # Google OAuth flow & token management
+│   │           ├── user.ts       # User profile endpoints
+│   │           ├── gmail.ts      # Gmail API integration
+│   │           ├── drive.ts      # Google Drive API integration
+│   │           ├── products.ts   # Product management
+│   │           └── orders.ts     # Order management
 │   ├── web/                      # Next.js (App Router)
 │   │   ├── app/
 │   │   │   ├── page.tsx          # Dashboard (Gmail/Drive tabs)
@@ -168,8 +178,11 @@ Implemented via `google-auth-library` with these scopes:
 
 ### 5.4 Authorization Middleware (API)
 
+Located in `apps/api/src/middleware/auth.ts`:
+
 - `authenticateJWT`: verifies JWT, attaches `req.user`
 - `requireRole(["admin","user"])`: basic guard used on sample endpoints
+- `JwtUser` type: shared TypeScript interface for authenticated users
 
 ### 5.5 Web Route Protection
 
@@ -180,13 +193,29 @@ Implemented via `google-auth-library` with these scopes:
 
 ## 6. API Surface
 
-Located in `apps/api/src/index.ts`.
+The API is organized into modular route files under `apps/api/src/routes/` for better maintainability and separation of concerns.
+
+**Main Entry Point:**
+- `apps/api/src/index.ts` — Mounts all routes and configures middleware
+
+**Route Modules:**
+- `apps/api/src/routes/auth.ts` — Email/password authentication
+- `apps/api/src/routes/google-oauth.ts` — Google OAuth flow & token management
+- `apps/api/src/routes/user.ts` — User profile endpoints
+- `apps/api/src/routes/gmail.ts` — Gmail API integration
+- `apps/api/src/routes/drive.ts` — Google Drive API integration
+- `apps/api/src/routes/products.ts` — Product management
+- `apps/api/src/routes/orders.ts` — Order management
+
+**Middleware:**
+- `apps/api/src/middleware/auth.ts` — JWT authentication and role-based authorization
+
+**Endpoints by Category:**
 
 **Health & Auth:**
 - `GET /api/health` — health check
 - `POST /api/auth/register` — email/password registration
 - `POST /api/auth/login-email` — email/password login
-- `GET /api/user/me` — current user info (with Google account data)
 
 **Google OAuth:**
 - `GET /api/auth/google/start` — begin OAuth flow
@@ -195,16 +224,41 @@ Located in `apps/api/src/index.ts`.
 - `POST /api/auth/google/refresh` — manually refresh access token
 - `POST /api/auth/google/disconnect` — revoke and clear tokens
 
+**User Management:**
+- `GET /api/user/me` — current user info (with Google account data)
+- `GET /api/user/:id` — get user by ID
+
 **Google APIs (with auto-refresh):**
 - `GET /api/gmail/labels` — Gmail labels with message/thread counts
 - `GET /api/drive/files` — Google Drive API access
 
 **Sample Data:**
-- Users: `GET /api/user/:id`
 - Products: `GET /api/product/:id`, `GET /api/products`
 - Orders: `GET /api/order/:id`, `GET /api/orders`
 
 Error handling returns JSON `{ error: string }` with appropriate status codes.
+
+### 6.1 API Architecture Benefits
+
+**Modular Design:**
+- Each route file handles a specific domain (auth, Gmail, Drive, etc.)
+- Easy to locate and modify specific functionality
+- Clear separation of concerns
+
+**Maintainability:**
+- Reduced complexity in main `index.ts` file (40 lines vs 512 lines)
+- Reusable middleware components
+- Consistent error handling patterns
+
+**Development Experience:**
+- TypeScript types shared across modules
+- Hot reloading works per-file during development
+- Easier testing of individual route modules
+
+**Scalability:**
+- Simple to add new route modules
+- Middleware can be applied selectively
+- Route-specific dependencies isolated
 
 ## 7. Web Application (Next.js)
 
@@ -293,7 +347,7 @@ Refresh tokens can be revoked by:
 - User changing Google password
 - 6 months of inactivity (Google's policy)
 
-**Utility Functions:**
+**Utility Functions (in `apps/api/src/routes/google-oauth.ts`):**
 - `getValidGoogleAccessToken(userId)` — automatically checks expiration and refreshes if needed
 - `refreshGoogleAccessToken(userId)` — manually refreshes access token using refresh token
 

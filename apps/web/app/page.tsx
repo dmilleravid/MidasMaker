@@ -92,12 +92,12 @@ export default function Dashboard() {
 
       const data = await response.json();
       // Filter out system labels except "Inbox"
-      const filteredLabels = (data.labels || []).filter((label: any) => {
+      const filteredLabels = (data.labels || []).filter((label: { name: string; type: string }) => {
         // Keep Inbox and all user-created labels
         return label.name === 'INBOX' || label.type === 'user';
       });
       // Sort labels alphabetically by name (ascending)
-      const sortedLabels = filteredLabels.sort((a: any, b: any) => 
+      const sortedLabels = filteredLabels.sort((a: { name: string }, b: { name: string }) => 
         a.name.toLowerCase().localeCompare(b.name.toLowerCase())
       );
       setGmailLabels(sortedLabels);
