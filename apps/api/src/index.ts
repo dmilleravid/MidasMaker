@@ -30,6 +30,68 @@ const googleClient = new OAuth2Client({
   redirectUri: GOOGLE_REDIRECT_URI,
 });
 
+// Utility function to refresh Google access token
+async function refreshGoogleAccessToken(userId: string): Promise<string | null> {
+  try {
+    const googleAccount = await prisma.googleAccount.findUnique({
+      where: { userId }
+    });
+    
+    if (!googleAccount?.refreshToken) {
+      return null;
+    }
+    
+    googleClient.setCredentials({
+      refresh_token: googleAccount.refreshToken
+    });
+    
+    const { credentials } = await googleClient.refreshAccessToken();
+    
+    // Update the stored tokens
+    await prisma.googleAccount.update({
+      where: { userId },
+      data: {
+        accessToken: credentials.access_token || undefined,
+        refreshToken: credentials.refresh_token || googleAccount.refreshToken,
+        expiresAt: credentials.expiry_date ? new Date(credentials.expiry_date) : undefined,
+      }
+    });
+    
+    return credentials.access_token || null;
+  } catch (error) {
+    console.error('Error refreshing Google access token:', error);
+    return null;
+  }
+}
+
+// Utility function to get a valid Google access token (current or refreshed)
+async function getValidGoogleAccessToken(userId: string): Promise<string | null> {
+  try {
+    const googleAccount = await prisma.googleAccount.findUnique({
+      where: { userId }
+    });
+    
+    if (!googleAccount?.accessToken) {
+      return null;
+    }
+    
+    // Check if token is expired (with 5 minute buffer)
+    const now = new Date();
+    const expiresAt = googleAccount.expiresAt;
+    const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    if (expiresAt && new Date(expiresAt.getTime() - bufferTime) <= now) {
+      // Token is expired or about to expire, refresh it
+      return await refreshGoogleAccessToken(userId);
+    }
+    
+    return googleAccount.accessToken;
+  } catch (error) {
+    console.error('Error getting valid Google access token:', error);
+    return null;
+  }
+}
+
 type JwtUser = { id: string; role: "admin" | "user" };
 
 function authenticateJWT(req: Request & { user?: JwtUser }, res: Response, next: NextFunction) {
@@ -175,7 +237,7 @@ app.get("/api/orders", authenticateJWT, requireRole(["admin", "user"]), async (_
 app.get("/api/auth/google/start", (req, res) => {
   const state = req.query.next ? encodeURIComponent(String(req.query.next)) : undefined;
   const url = googleClient.generateAuthUrl({
-    access_type: "offline",
+    access_type: "offline", // This is crucial for getting refresh tokens
     scope: [
       "openid",
       "profile",
@@ -183,7 +245,7 @@ app.get("/api/auth/google/start", (req, res) => {
       "https://www.googleapis.com/auth/drive.readonly",
       "https://www.googleapis.com/auth/gmail.readonly",
     ],
-    prompt: "consent",
+    prompt: "consent", // This ensures we get a refresh token even if user previously authorized
     state: state,
   });
   res.redirect(url);
@@ -324,6 +386,97 @@ app.post(
     });
 
     return res.json({ disconnected: true });
+  }
+);
+
+// Refresh Google access token
+app.post(
+  "/api/auth/google/refresh",
+  authenticateJWT,
+  requireRole(["admin", "user"]),
+  async (req: Request & { user?: JwtUser }, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthenticated" });
+
+    try {
+      const newAccessToken = await refreshGoogleAccessToken(userId);
+      if (!newAccessToken) {
+        return res.status(400).json({ error: "No refresh token available or refresh failed" });
+      }
+
+      return res.json({ 
+        success: true, 
+        message: "Access token refreshed successfully",
+        expiresIn: 3600 // Google access tokens typically last 1 hour
+      });
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      return res.status(500).json({ error: "Failed to refresh access token" });
+    }
+  }
+);
+
+// Get Gmail messages (example of using refresh token)
+app.get(
+  "/api/gmail/messages",
+  authenticateJWT,
+  requireRole(["admin", "user"]),
+  async (req: Request & { user?: JwtUser }, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthenticated" });
+
+    try {
+      const accessToken = await getValidGoogleAccessToken(userId);
+      if (!accessToken) {
+        return res.status(400).json({ error: "No valid Google access token available" });
+      }
+
+      // Set the access token for the Google client
+      googleClient.setCredentials({ access_token: accessToken });
+
+      // Example: Get Gmail messages (you'll need to implement the actual Gmail API call)
+      // For now, return a success message
+      return res.json({ 
+        success: true, 
+        message: "Gmail access token is valid and ready for API calls",
+        tokenExpiresIn: "1 hour (auto-refreshed)"
+      });
+    } catch (error) {
+      console.error('Error accessing Gmail:', error);
+      return res.status(500).json({ error: "Failed to access Gmail" });
+    }
+  }
+);
+
+// Get Google Drive files (example of using refresh token)
+app.get(
+  "/api/drive/files",
+  authenticateJWT,
+  requireRole(["admin", "user"]),
+  async (req: Request & { user?: JwtUser }, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthenticated" });
+
+    try {
+      const accessToken = await getValidGoogleAccessToken(userId);
+      if (!accessToken) {
+        return res.status(400).json({ error: "No valid Google access token available" });
+      }
+
+      // Set the access token for the Google client
+      googleClient.setCredentials({ access_token: accessToken });
+
+      // Example: Get Google Drive files (you'll need to implement the actual Drive API call)
+      // For now, return a success message
+      return res.json({ 
+        success: true, 
+        message: "Google Drive access token is valid and ready for API calls",
+        tokenExpiresIn: "1 hour (auto-refreshed)"
+      });
+    } catch (error) {
+      console.error('Error accessing Google Drive:', error);
+      return res.status(500).json({ error: "Failed to access Google Drive" });
+    }
   }
 );
 
