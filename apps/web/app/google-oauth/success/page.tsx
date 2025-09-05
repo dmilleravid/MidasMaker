@@ -8,6 +8,7 @@ export default function GoogleSuccessPage() {
     const token = url.searchParams.get("token");
     if (token) {
       localStorage.setItem("auth_token", token);
+      document.cookie = `auth_token=${token}; path=/`;
     }
   }, []);
 

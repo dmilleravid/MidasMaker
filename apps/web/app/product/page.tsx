@@ -1,9 +1,12 @@
 import { apiBaseUrl } from "@/lib/config";
 async function fetchProduct() {
   try {
-    const res = await fetch(`${apiBaseUrl}/api/products`, { cache: "no-store" });
+    const res = await fetch(`${apiBaseUrl}/api/products`, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${typeof window === "undefined" ? "" : (document.cookie.match(/auth_token=([^;]+)/)?.[1] || "")}` },
+    });
     return await res.json();
-  } catch (e) {
+  } catch (_e) {
     return { ok: false };
   }
 }
