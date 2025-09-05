@@ -8,6 +8,8 @@ export const useDashboard = () => {
   const [gmailLabels, setGmailLabels] = useState<GmailLabel[]>([]);
   const [gmailLoading, setGmailLoading] = useState(false);
   const [gmailError, setGmailError] = useState<string | null>(null);
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
+  const [monitorLoading, setMonitorLoading] = useState(false);
   const [driveFolders, setDriveFolders] = useState<DriveFolder[]>([]);
   const [driveLoading, setDriveLoading] = useState(false);
   const [driveError, setDriveError] = useState<string | null>(null);
@@ -86,6 +88,14 @@ export const useDashboard = () => {
         a.name.toLowerCase().localeCompare(b.name.toLowerCase())
       );
       setGmailLabels(sortedLabels);
+      
+      // Initialize selected folders based on monitoring status
+      const monitoredFolderIds = new Set<string>(
+        sortedLabels
+          .filter((label: GmailLabel) => label.isMonitored)
+          .map((label: GmailLabel) => label.id)
+      );
+      setSelectedFolders(monitoredFolderIds);
     } catch (error) {
       console.error('Error fetching Gmail labels:', error);
       setGmailError(error instanceof Error ? error.message : 'Failed to fetch Gmail labels');
@@ -153,6 +163,57 @@ export const useDashboard = () => {
     fetchDriveFolders(parentId);
   };
 
+  const toggleFolderSelection = (folderId: string) => {
+    setSelectedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
+  const saveMonitoredFolders = async () => {
+    setMonitorLoading(true);
+    
+    try {
+      const token = getAuthToken();
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const selectedFolderData = gmailLabels
+        .filter(label => selectedFolders.has(label.id))
+        .map(label => ({ id: label.id, name: label.name }));
+
+      const response = await fetch(`${API_BASE_URL}/api/gmail/monitor`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ selectedFolders: selectedFolderData })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save monitored folders');
+      }
+
+      // Refresh the Gmail labels to get updated monitoring status
+      await fetchGmailLabels();
+      
+    } catch (error) {
+      console.error('Error saving monitored folders:', error);
+      setGmailError(error instanceof Error ? error.message : 'Failed to save monitored folders');
+    } finally {
+      setMonitorLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchUserInfo();
   }, [fetchUserInfo]);
@@ -162,6 +223,8 @@ export const useDashboard = () => {
     gmailLabels,
     gmailLoading,
     gmailError,
+    selectedFolders,
+    monitorLoading,
     driveFolders,
     driveLoading,
     driveError,
@@ -170,6 +233,8 @@ export const useDashboard = () => {
     fetchDriveFolders,
     handleLogout,
     handleFolderClick,
-    handleBackClick
+    handleBackClick,
+    toggleFolderSelection,
+    saveMonitoredFolders
   };
 };

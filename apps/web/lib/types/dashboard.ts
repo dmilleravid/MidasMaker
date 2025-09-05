@@ -6,6 +6,7 @@ export interface GmailLabel {
   messagesUnread: number;
   threadsTotal: number;
   threadsUnread: number;
+  isMonitored: boolean;
 }
 
 export interface DriveFolder {

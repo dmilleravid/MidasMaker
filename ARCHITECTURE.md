@@ -9,7 +9,7 @@ This repository is a monorepo that contains three applications: a Next.js web ap
                                     |                    |
                                     |                    +--> [Google OAuth 2.0]
                                     |                    |
-                                    |                    +--> [Gmail API Integration]
+                                    |                    +--> [Gmail API Integration + Monitoring]
                                     |                    |
                                     |                    +--> [Google Drive API Integration]
                                     |                    |
@@ -107,6 +107,7 @@ Core models are defined in `apps/api/prisma/schema.prisma`.
 
 - User: basic profile, email, password (hashed), mobile, role
 - GoogleAccount: 1:1 with User; stores Google identity and tokens (access/refresh)
+- MonitoredGmailFolder: tracks which Gmail folders users want to monitor
 - Product / Order: sample domain models
 - Role enum: admin, user
 
@@ -114,6 +115,7 @@ Relations:
 
 - User 1—n Order
 - User 1—1 GoogleAccount
+- User 1—n MonitoredGmailFolder
 - Order n—1 Product
 
 Seeding: run `npm --prefix apps/api run seed` to populate sample users, products, and an order.
@@ -236,8 +238,9 @@ The API is organized into modular route files under `apps/api/src/routes/` for b
 - `GET /api/user/:id` — get user by ID
 
 **Google APIs (with auto-refresh):**
-- `GET /api/gmail/labels` — Gmail labels with message/thread counts
-- `GET /api/drive/files` — Google Drive API access
+- `GET /api/gmail/labels` — Gmail labels with message/thread counts and monitoring status
+- `POST /api/gmail/monitor` — Save selected Gmail folders for monitoring
+- `GET /api/drive/folders` — Google Drive folder navigation with hierarchical browsing
 
 **Sample Data:**
 - Products: `GET /api/product/:id`, `GET /api/products`
@@ -281,7 +284,9 @@ Error handling returns JSON `{ error: string }` with appropriate status codes.
 **Features:**
 - **Route Protection:** Middleware redirects unauthenticated users to login
 - **User Dashboard:** Displays user name and logout functionality
-- **Gmail Integration:** Real-time Gmail labels table with message/thread counts
+- **Gmail Integration:** Real-time Gmail labels table with folder monitoring capabilities
+- **Gmail Folder Monitoring:** Users can select folders to monitor with persistent checkbox state
+- **Google Drive Navigation:** Hierarchical folder browsing with breadcrumb navigation
 - **Dual Authentication:** Both Google OAuth and email/password options
 - **Responsive Design:** Modern UI with Tailwind CSS
 - **Token Management:** Automatic JWT handling and storage
@@ -365,9 +370,46 @@ Refresh tokens can be revoked by:
 - Automatic detection requiring no manual intervention
 - Secure token storage and management
 
-## 14. Roadmap
+## 14. Gmail Folder Monitoring System
 
-- Implement actual Gmail and Google Drive API integrations
+**Overview:**
+The Gmail folder monitoring system allows users to select which Gmail folders they want to monitor, with persistent storage of their selections in the database.
+
+**Database Schema:**
+- `MonitoredGmailFolder` table stores user folder selections
+- Fields: `id`, `userId`, `folderId`, `folderName`, `isActive`, `createdAt`, `updatedAt`
+- Unique constraint on `userId + folderId` prevents duplicates
+- Soft delete via `isActive` flag for audit trail
+
+**API Endpoints:**
+- `GET /api/gmail/labels` — Returns Gmail labels with `isMonitored` status
+- `POST /api/gmail/monitor` — Saves selected folders for monitoring
+
+**Frontend Implementation:**
+- Gmail tab displays folders as a form with checkboxes
+- First column: checkbox for folder selection
+- Second column: folder name (removed Type and Total Messages columns)
+- "Monitor" button saves selections to database
+- Checkboxes persist state based on database monitoring status
+
+**User Workflow:**
+1. User views Gmail folders with checkboxes (unchecked by default)
+2. User selects folders by checking boxes
+3. User clicks "Monitor" button to save selections
+4. Database updates with selected folders marked as monitored
+5. Next visit shows previously monitored folders as checked
+6. User can uncheck and click "Monitor" again to stop monitoring
+
+**Technical Details:**
+- Uses upsert logic to handle adding/removing monitored folders
+- Deactivates all current selections before saving new ones
+- Refreshes Gmail labels after saving to show updated monitoring status
+- State management via React hooks with Set for efficient checkbox tracking
+
+## 15. Roadmap
+
+- ✅ Gmail API integration with folder monitoring
+- ✅ Google Drive API integration with hierarchical navigation
 - Add email search and file management features
 - Expand API tests and add mobile tests when needed
 - Production-ready migrations (`prisma migrate`) and CI database checks

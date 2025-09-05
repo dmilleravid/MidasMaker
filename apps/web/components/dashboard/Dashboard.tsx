@@ -11,6 +11,8 @@ export const Dashboard: React.FC = () => {
     gmailLabels,
     gmailLoading,
     gmailError,
+    selectedFolders,
+    monitorLoading,
     driveFolders,
     driveLoading,
     driveError,
@@ -19,14 +21,16 @@ export const Dashboard: React.FC = () => {
     fetchDriveFolders,
     handleLogout,
     handleFolderClick,
-    handleBackClick
+    handleBackClick,
+    toggleFolderSelection,
+    saveMonitoredFolders
   } = useDashboard();
 
   const handleTabChange = (tab: 'gmail' | 'drive') => {
     setActiveTab(tab);
-    if (tab === 'gmail' && gmailLabels.length === 0 && !gmailLoading) {
+    if (tab === 'gmail' && !gmailLoading) {
       fetchGmailLabels();
-    } else if (tab === 'drive' && driveFolders.length === 0 && !driveLoading) {
+    } else if (tab === 'drive' && !driveLoading) {
       fetchDriveFolders();
     }
   };
@@ -68,7 +72,10 @@ export const Dashboard: React.FC = () => {
               labels={gmailLabels}
               loading={gmailLoading}
               error={gmailError}
-              onRefresh={fetchGmailLabels}
+              selectedFolders={selectedFolders}
+              monitorLoading={monitorLoading}
+              onToggleFolder={toggleFolderSelection}
+              onSaveMonitored={saveMonitoredFolders}
             />
           ) : (
             <DriveContent
@@ -76,7 +83,6 @@ export const Dashboard: React.FC = () => {
               loading={driveLoading}
               error={driveError}
               currentParent={currentDriveParent}
-              onRefresh={() => fetchDriveFolders(currentDriveParent.id)}
               onFolderClick={handleFolderClick}
               onBackClick={handleBackClick}
             />

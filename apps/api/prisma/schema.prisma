@@ -20,6 +20,7 @@ model User {
   mobile        String         @unique
   googleAccount GoogleAccount?
   orders        Order[]
+  monitoredGmailFolders MonitoredGmailFolder[]
 }
 
 model Product {
@@ -54,6 +55,19 @@ model GoogleAccount {
   expiresAt    DateTime?
   createdAt    DateTime  @default(now())
   user         User      @relation(fields: [userId], references: [id])
+}
+
+model MonitoredGmailFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  folderId  String   // Gmail folder ID
+  folderName String  // Gmail folder name
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, folderId])
 }
 
 enum Role {

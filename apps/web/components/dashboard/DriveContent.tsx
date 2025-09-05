@@ -6,7 +6,6 @@ interface DriveContentProps {
   loading: boolean;
   error: string | null;
   currentParent: DriveParent;
-  onRefresh: () => void;
   onFolderClick: (folderId: string) => void;
   onBackClick: () => void;
 }
@@ -16,7 +15,6 @@ export const DriveContent: React.FC<DriveContentProps> = ({
   loading,
   error,
   currentParent,
-  onRefresh,
   onFolderClick,
   onBackClick
 }) => {
@@ -43,26 +41,17 @@ export const DriveContent: React.FC<DriveContentProps> = ({
       </div>
       
       <div className="dashboard-card">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-4">
-            <h3>📁 Google Drive Folders</h3>
-            {currentParent.id !== 'root' && (
-              <button 
-                onClick={onBackClick}
-                className="btn btn-secondary text-sm"
-                disabled={loading}
-              >
-                ← Back to {currentParent.parents.length > 0 ? 'Parent' : 'My Drive'}
-              </button>
-            )}
-          </div>
-          <button 
-            onClick={onRefresh} 
-            className="btn btn-primary"
-            disabled={loading}
-          >
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
+        <div className="flex items-center gap-4 mb-4">
+          <h3>📁 Google Drive Folders</h3>
+          {currentParent.id !== 'root' && (
+            <button 
+              onClick={onBackClick}
+              className="btn btn-secondary text-sm"
+              disabled={loading}
+            >
+              ← Back to {currentParent.parents.length > 0 ? 'Parent' : 'My Drive'}
+            </button>
+          )}
         </div>
         
         {/* Breadcrumb */}
@@ -78,9 +67,7 @@ export const DriveContent: React.FC<DriveContentProps> = ({
         ) : error ? (
           <div className="text-center py-8">
             <p className="text-red-600 mb-2">Error: {error}</p>
-            <button onClick={onRefresh} className="btn btn-primary">
-              Try Again
-            </button>
+            <p className="text-sm text-gray-500">Switch tabs to retry</p>
           </div>
         ) : folders.length > 0 ? (
           <div className="overflow-x-auto">

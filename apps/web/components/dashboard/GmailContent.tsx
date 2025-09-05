@@ -5,44 +5,36 @@ interface GmailContentProps {
   labels: GmailLabel[];
   loading: boolean;
   error: string | null;
-  onRefresh: () => void;
+  selectedFolders: Set<string>;
+  monitorLoading: boolean;
+  onToggleFolder: (folderId: string) => void;
+  onSaveMonitored: () => void;
 }
 
 export const GmailContent: React.FC<GmailContentProps> = ({
   labels,
   loading,
   error,
-  onRefresh
+  selectedFolders,
+  monitorLoading,
+  onToggleFolder,
+  onSaveMonitored
 }) => {
   const totalUnread = labels.reduce((sum, label) => sum + label.messagesUnread, 0);
   const totalMessages = labels.reduce((sum, label) => sum + label.messagesTotal, 0);
 
   return (
     <div>
-      <div className="dashboard-stats">
-        <div className="dashboard-stat">
-          <p className="dashboard-stat-value">{totalUnread}</p>
-          <p className="dashboard-stat-label">Unread Emails</p>
-        </div>
-        <div className="dashboard-stat">
-          <p className="dashboard-stat-value">{totalMessages}</p>
-          <p className="dashboard-stat-label">Total Emails</p>
-        </div>
-        <div className="dashboard-stat">
-          <p className="dashboard-stat-value">{labels.length}</p>
-          <p className="dashboard-stat-label">Labels</p>
-        </div>
-      </div>
       
       <div className="dashboard-card">
-        <div className="flex justify-between items-center mb-4">
-          <h3>📧 Gmail Labels</h3>
+        <div className="flex items-center mb-4 gap-2">
+          <h3 className="flex-1">📧 Gmail Labels</h3>
           <button 
-            onClick={onRefresh} 
-            className="btn btn-primary"
-            disabled={loading}
+            onClick={onSaveMonitored}
+            className="bg-blue-600 text-white text-base font-bold px-5 py-2.5 rounded hover:bg-blue-700 disabled:opacity-50"
+            disabled={monitorLoading}
           >
-            {loading ? 'Loading...' : 'Refresh'}
+            {monitorLoading ? 'Saving...' : 'Monitor'}
           </button>
         </div>
         
@@ -54,37 +46,32 @@ export const GmailContent: React.FC<GmailContentProps> = ({
         ) : error ? (
           <div className="text-center py-8">
             <p className="text-red-600 mb-2">Error: {error}</p>
-            <button onClick={onRefresh} className="btn btn-primary">
-              Try Again
-            </button>
+            <p className="text-sm text-gray-500">Switch tabs to retry</p>
           </div>
         ) : labels.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="dashboard-table">
               <thead>
                 <tr>
+                  <th className="w-12">Select</th>
                   <th className="text-left">
-                    Label Name
+                    Folder Name
                     <span className="ml-1 text-xs text-gray-500">↑</span>
                   </th>
-                  <th className="text-left">Type</th>
-                  <th className="text-right">Total Messages</th>
                 </tr>
               </thead>
               <tbody>
                 {labels.map((label) => (
                   <tr key={label.id}>
-                    <td className="font-medium">{label.name}</td>
-                    <td>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        label.type === 'system' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {label.type}
-                      </span>
+                    <td className="text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedFolders.has(label.id)}
+                        onChange={() => onToggleFolder(label.id)}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
                     </td>
-                    <td className="text-right">{label.messagesTotal}</td>
+                    <td className="font-medium">{label.name}</td>
                   </tr>
                 ))}
               </tbody>
