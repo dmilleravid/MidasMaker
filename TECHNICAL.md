@@ -12,5 +12,10 @@
 
 ## Env Vars
 - `DATABASE_URL`, `JWT_SECRET`, `VERCEL_ENV`.
+- Google OAuth:
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
+  - `GOOGLE_REDIRECT_URI` (e.g., http://localhost:3001/api/auth/google/callback)
+  - `NEXT_PUBLIC_API_BASE_URL` (e.g., http://localhost:3001)
 
 

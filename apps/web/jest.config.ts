@@ -8,12 +8,7 @@ const config: Config.InitialOptions = {
     "^@/(.*)$": "<rootDir>/$1",
   },
   transform: {
-    "^.+\\.(ts|tsx)$": [
-      "ts-jest",
-      {
-        tsconfig: "tsconfig.json",
-      },
-    ],
+    '^.+\\.(ts|tsx)$': 'babel-jest',
   },
 };
 
