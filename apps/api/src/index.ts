@@ -112,6 +112,34 @@ app.post("/api/auth/login-email", async (req, res) => {
 });
 
 // Endpoints per spec
+app.get("/api/user/me", authenticateJWT, async (req: Request & { user?: JwtUser }, res) => {
+  try {
+    const user = await prisma.user.findUnique({ 
+      where: { id: req.user!.id },
+      include: { googleAccount: true }
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    
+    // Return user info without sensitive data
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      mobile: user.mobile,
+      role: user.role,
+      googleAccount: user.googleAccount ? {
+        googleId: user.googleAccount.googleId,
+        email: user.googleAccount.email,
+        name: user.googleAccount.name,
+        picture: user.googleAccount.picture
+      } : null
+    });
+  } catch (error) {
+    console.error('Error fetching user info:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.get("/api/user/:id", authenticateJWT, requireRole(["admin", "user"]), async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.params.id } });
   if (!user) return res.status(404).json({ error: "Not found" });
@@ -144,7 +172,8 @@ app.get("/api/orders", authenticateJWT, requireRole(["admin", "user"]), async (_
 });
 
 // Google OAuth: start
-app.get("/api/auth/google/start", (_req, res) => {
+app.get("/api/auth/google/start", (req, res) => {
+  const state = req.query.next ? encodeURIComponent(String(req.query.next)) : undefined;
   const url = googleClient.generateAuthUrl({
     access_type: "offline",
     scope: [
@@ -155,6 +184,7 @@ app.get("/api/auth/google/start", (_req, res) => {
       "https://www.googleapis.com/auth/gmail.readonly",
     ],
     prompt: "consent",
+    state: state,
   });
   res.redirect(url);
 });
@@ -222,7 +252,10 @@ app.get("/api/auth/google/callback", async (req, res) => {
       return res.status(500).json({ error: "JWT secret not configured" });
     }
     const token = jwt.sign({ id: user.id, role: "user" }, APP_JWT_SECRET, { expiresIn: "7d" });
-    return res.redirect(`${WEB_BASE_URL}/google-oauth/success?token=${encodeURIComponent(token)}`);
+    
+    // Preserve the 'next' parameter from state if it exists
+    const next = req.query.state ? `&next=${req.query.state}` : '';
+    return res.redirect(`${WEB_BASE_URL}/google-oauth/success?token=${encodeURIComponent(token)}${next}`);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(err);
