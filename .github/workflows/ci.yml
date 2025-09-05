@@ -12,6 +12,19 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,11 +34,18 @@ jobs:
           cache-dependency-path: apps/api/package-lock.json
       - run: npm ci
       - run: npx prisma generate
+      - run: npx prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       - run: npm run build
       - run: npm test
         env:
           JWT_SECRET: test_secret
           VERCEL_ENV: development
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          GOOGLE_CLIENT_ID: test_client_id
+          GOOGLE_CLIENT_SECRET: test_client_secret
+          GOOGLE_REDIRECT_URI: http://localhost:3001/api/auth/google/callback
 
   web:
     name: Web (build)
