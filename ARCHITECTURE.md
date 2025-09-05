@@ -196,7 +196,7 @@ Located in `apps/api/src/index.ts`.
 - `POST /api/auth/google/disconnect` — revoke and clear tokens
 
 **Google APIs (with auto-refresh):**
-- `GET /api/gmail/messages` — Gmail API access
+- `GET /api/gmail/labels` — Gmail labels with message/thread counts
 - `GET /api/drive/files` — Google Drive API access
 
 **Sample Data:**
@@ -220,6 +220,7 @@ Error handling returns JSON `{ error: string }` with appropriate status codes.
 **Features:**
 - **Route Protection:** Middleware redirects unauthenticated users to login
 - **User Dashboard:** Displays user name and logout functionality
+- **Gmail Integration:** Real-time Gmail labels table with message/thread counts
 - **Dual Authentication:** Both Google OAuth and email/password options
 - **Responsive Design:** Modern UI with Tailwind CSS
 - **Token Management:** Automatic JWT handling and storage

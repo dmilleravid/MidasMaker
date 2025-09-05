@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import bcrypt from "bcryptjs";
+import { google } from "googleapis";
 
 dotenv.config();
 
@@ -416,9 +417,9 @@ app.post(
   }
 );
 
-// Get Gmail messages (example of using refresh token)
+// Get Gmail labels
 app.get(
-  "/api/gmail/messages",
+  "/api/gmail/labels",
   authenticateJWT,
   requireRole(["admin", "user"]),
   async (req: Request & { user?: JwtUser }, res: Response) => {
@@ -431,19 +432,36 @@ app.get(
         return res.status(400).json({ error: "No valid Google access token available" });
       }
 
-      // Set the access token for the Google client
+      // Create Gmail API client
+      const gmail = google.gmail({ version: 'v1', auth: googleClient });
       googleClient.setCredentials({ access_token: accessToken });
 
-      // Example: Get Gmail messages (you'll need to implement the actual Gmail API call)
-      // For now, return a success message
+      // Get Gmail labels
+      const response = await gmail.users.labels.list({
+        userId: 'me'
+      });
+
+      const labels = response.data.labels || [];
+      
+      // Format labels for frontend
+      const formattedLabels = labels.map(label => ({
+        id: label.id,
+        name: label.name,
+        type: label.type,
+        messagesTotal: label.messagesTotal || 0,
+        messagesUnread: label.messagesUnread || 0,
+        threadsTotal: label.threadsTotal || 0,
+        threadsUnread: label.threadsUnread || 0
+      }));
+
       return res.json({ 
         success: true, 
-        message: "Gmail access token is valid and ready for API calls",
-        tokenExpiresIn: "1 hour (auto-refreshed)"
+        labels: formattedLabels,
+        totalLabels: formattedLabels.length
       });
     } catch (error) {
-      console.error('Error accessing Gmail:', error);
-      return res.status(500).json({ error: "Failed to access Gmail" });
+      console.error('Error fetching Gmail labels:', error);
+      return res.status(500).json({ error: "Failed to fetch Gmail labels" });
     }
   }
 );
